@@ -1,10 +1,13 @@
 from multiprocessing import Process, Value
 import socket
 import time
+import json
 import sh
 
 
 KEYBOARD_ID = '8'
+USER = 'etoccalino'
+
 SHOW_INTERVAL = 3  # seconds
 
 CONNECTION_ADDR = 'localhost'
@@ -16,7 +19,8 @@ CONNECTION_TIMEOUT = 2.0  # seconds
 
 def send_count(value):
     sock = socket.socket(type=socket.SOCK_DGRAM)
-    message = str(value)
+    data = {'user': USER, 'count': value}
+    message = json.dumps(data)
     sock.connect((CONNECTION_ADDR, CONNECTION_PORT))
     sock.send(message)
 

@@ -1,4 +1,5 @@
 from gevent.server import DatagramServer
+import json
 
 CONNECTION_ADDR = 'localhost'
 CONNECTION_PORT = 55555
@@ -9,11 +10,15 @@ class NumbersServer(DatagramServer):
 
     def handle(self, data, address):
         try:
-            value = long(data)
-        except TypeError:
+            data = json.loads(data)
+            user = data['user']
+            value = long(data['count'])
+        except (ValueError, TypeError):
+            # ValueError due to bad JSON data,
+            # TypeError due to bad number.
             print 'bad data ignored.'
         else:
-            print '%s: got %i' % (address[0], value)
+            print '%s (%s): %i' % (user, address[0], value)
 
 
 if __name__ == '__main__':
