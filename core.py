@@ -45,12 +45,11 @@ class NumbersManager:
 class NumbersPusher:
     "Push packed key count data to the destination sever."
 
-    PUSH_INTERVAL = 3  # seconds
-
     logger = logging.getLogger('push.pusher')
 
-    def __init__(self, manager, strategy='test', *args, **kwargs):
+    def __init__(self, manager, interval, strategy='test', *args, **kwargs):
         self.manager = manager
+        self.interval = interval
         self.running = False
         # Compose the push strategy object, and delegate to it.
         self._pusher = PushStrategy(strategy, *args, **kwargs)
@@ -64,7 +63,7 @@ class NumbersPusher:
         self.running = True
         token = None
         while self.running:
-            gevent.sleep(self.PUSH_INTERVAL)
+            gevent.sleep(self.interval)
             if token != self.manager.get_data_token():
                 data, token = self.manager.get_data_packet()
                 self.push(data)

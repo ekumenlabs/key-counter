@@ -1,12 +1,6 @@
 import gevent
-
-from core import NumbersManager, NumbersPusher, NumbersServer, PushStrategy
-
-###############################################################################
-
-CLIENT_CONNECTION_ADDR = 'localhost'
-CLIENT_CONNECTION_PORT = 55555
-CLIENT_CONNECTION_TIMEOUT = 3  # seconds? see socket.socket.create_connection()
+import argparse
+import core
 
 ###############################################################################
 
@@ -24,7 +18,7 @@ LOGGING = {
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple'
+            'formatter': 'brief'
         }
     },
     'loggers': {
@@ -49,23 +43,41 @@ LOGGING = {
 import logging
 import logging.config
 logging.config.dictConfig(LOGGING)
+logger = logging.getLogger('server')
 
 ###############################################################################
 
-logger = logging.getLogger('server')
+CONNECTION_PORT = 55555
+PUSH_INTERVAL = 3.0  # seconds
 
 if __name__ == '__main__':
-    logger.info('Receiving datagrams on : %s' % CLIENT_CONNECTION_PORT)
-    address = ':' + str(CLIENT_CONNECTION_PORT)
 
-    manager = NumbersManager()
-    server = NumbersServer(address, manager)
-    pusher = NumbersPusher(manager, strategy=PushStrategy.PUSH_TO_FILE,
-                           file_name='output.log')
+    # Parse the arguments for host, port and username.
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-p", "--port", type=int,
+        help=("server port (defaults to %s)" % CONNECTION_PORT))
+    parser.add_argument(
+        "-i", "--interval", type=float,
+        help=("publishing interval, in seconds (defaults to %s)"
+              % PUSH_INTERVAL))
+    args = parser.parse_args()
+    if not args.port:
+        args.port = CONNECTION_PORT
+    if not args.interval:
+        args.port = PUSH_INTERVAL
 
+    # Initialize core components.
+    manager = core.NumbersManager()
+    server = core.NumbersServer(':%s' % args.port, manager)
+    pusher = core.NumbersPusher(manager, args.interval,
+                                strategy=core.PushStrategy.PUSH_TO_STDOUT)
+
+    # Spawn the upstream pusher.
     gevent.spawn(pusher.start)
 
     try:
+        logger.info("Receiving user data at *:%s" % args.port)
         server.serve_forever()
     except KeyboardInterrupt:
         logger.info('Closing connections.')
