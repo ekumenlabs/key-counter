@@ -25,11 +25,14 @@ def send_count(value):
 
 def show_counter(counter):
     current_value = counter.value
-    while True:
-        time.sleep(SHOW_INTERVAL)
-        if counter.value != current_value:
-            current_value = counter.value
-            send_count(current_value)
+    try:
+        while True:
+            time.sleep(SHOW_INTERVAL)
+            if counter.value != current_value:
+                current_value = counter.value
+                send_count(current_value)
+    except KeyboardInterrupt:
+        print "Stoping send-counter process."
 
 
 ###############################################################################
@@ -38,18 +41,17 @@ def key_counter(counter):
     def incr_counter(line):
         if "press" in line:
             counter.value += 1
-    sh.xinput('test', KEYBOARD_ID, _out=incr_counter).wait()
+    try:
+        sh.xinput('test', KEYBOARD_ID, _out=incr_counter).wait()
+    except KeyboardInterrupt:
+        print "Stopping key-counter process."
 
 
 ###############################################################################
 
 if __name__ == '__main__':
+    # TODO: handle the exceptions.
+
     counter = Value('L', 0)
-
-    counter_process = Process(target=key_counter, args=(counter,))
-    # counter_process.daemon = True
-    shower_process = Process(target=show_counter, args=(counter,))
-    # shower_process.daemon = True
-
-    shower_process.start()
-    counter_process.start()
+    Process(target=key_counter, args=(counter,)).start()
+    Process(target=show_counter, args=(counter,)).start()
