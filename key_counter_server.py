@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     # Initialize core components.
     manager = core.NumbersManager()
-    server = core.NumbersServer(':%s' % args.port, manager)
+    server = core.NumbersServer(args.port, manager)
     pusher = core.NumbersPusher(manager, args.interval,
                                 strategy=core.PushStrategy.PUSH_TO_STDOUT)
 

@@ -162,7 +162,8 @@ class PushStrategy (object):
 
 class NumbersServer(DatagramServer):
 
-    def __init__(self, address, manager, *args, **kwargs):
+    def __init__(self, port, manager, *args, **kwargs):
+        address = ":%s" % port
         super(NumbersServer, self).__init__(address, *args, **kwargs)
         self.manager = manager
 
