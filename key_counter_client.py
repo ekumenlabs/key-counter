@@ -4,6 +4,9 @@ import time
 import json
 import sh
 
+import logging
+logger = logging.getLogger('client')
+
 
 KEYBOARD_ID = '8'
 USER = 'etoccalino'
@@ -36,7 +39,7 @@ def show_counter(counter):
                 current_value = counter.value
                 send_count(current_value)
     except KeyboardInterrupt:
-        print "Stoping send-counter process."
+        logger.info("Stoping send-counter process.")
 
 
 ###############################################################################
@@ -48,7 +51,7 @@ def key_counter(counter):
     try:
         sh.xinput('test', KEYBOARD_ID, _out=incr_counter).wait()
     except KeyboardInterrupt:
-        print "Stopping key-counter process."
+        logger.info("Stopping key-counter process.")
 
 
 ###############################################################################
