@@ -4,10 +4,6 @@ import time
 import json
 import sh
 
-import logging
-logger = logging.getLogger('client')
-
-
 KEYBOARD_ID = '8'
 USER = 'etoccalino'
 
@@ -16,6 +12,11 @@ SHOW_INTERVAL = 3  # seconds
 CONNECTION_ADDR = 'localhost'
 CONNECTION_PORT = 55555
 CONNECTION_TIMEOUT = 2.0  # seconds
+
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__file__)
 
 
 ###############################################################################

@@ -90,6 +90,7 @@ class PushStrategy (object):
     PUSH_TO_REST = 'rest'
 
     def __init__(self, strategy, *args, **kwargs):
+        self.logger = logging.getLogger('push.strategy.%s' % strategy)
         if strategy == PushStrategy.PUSH_TEST:
             self.push = self._test_push(*args, **kwargs)
         elif strategy == PushStrategy.PUSH_TO_STDOUT:
@@ -100,16 +101,15 @@ class PushStrategy (object):
             self.push = self._push_to_REST_API(*args, **kwargs)
         else:
             raise ValueError('Strategy "%s" not known.' % strategy)
-        self.logger = logging.getLogger('push.strategy.%s' % strategy)
 
     def _test_push(self):
         def _push(data):
             self.logger.debug("Pushing data.")
             self.pushed.append(data)
             self.logger.debug("Current pushed data: %s" % self.pushed)
-        self.pushed = []
         self.logger.info("Test pushing: "
                          "data is accumulated in self.pushed list.")
+        self.pushed = []
         return _push
 
     def _push_to_stdout(self):
@@ -120,9 +120,11 @@ class PushStrategy (object):
         return _push
 
     def _push_to_file(self, file_name):
+        "Write data as JSON encoded lines."
         def _push(data):
             with open(file_name, 'a') as pushed:
-                pushed.write(data)
+                line = "%s\n" % json.dumps(data)
+                pushed.write(line)
         self.logger.info("Pushing to file %s." % file_name)
         return _push
 
