@@ -86,7 +86,7 @@ class PushStrategy (object):
     PUSH_TEST = 'test'
     PUSH_TO_STDOUT = 'stdout'
     PUSH_TO_FILE = 'file'
-    PUSH_TO_REST = 'rest'
+    PUSH_TO_HTTP = 'http'
 
     def __init__(self, strategy, *args, **kwargs):
         self.logger = logging.getLogger('push.strategy.%s' % strategy)
@@ -96,8 +96,8 @@ class PushStrategy (object):
             self.push = self._push_to_stdout(*args, **kwargs)
         elif strategy == PushStrategy.PUSH_TO_FILE:
             self.push = self._push_to_file(*args, **kwargs)
-        elif strategy == PushStrategy.PUSH_TO_REST:
-            self.push = self._push_to_REST_API(*args, **kwargs)
+        elif strategy == PushStrategy.PUSH_TO_HTTP:
+            self.push = self._push_to_HTTP(*args, **kwargs)
         else:
             raise ValueError('Strategy "%s" not known.' % strategy)
 
@@ -127,8 +127,8 @@ class PushStrategy (object):
         self.logger.info("Pushing to file %s." % file_name)
         return _push
 
-    def _push_to_REST_API(self, base_URL):
-        """Push POSTing to a REST API.
+    def _push_to_HTTP(self, base_URL):
+        """Push POSTing to a HTTP API.
 
         The API must implement the following endpoints:
 
@@ -163,7 +163,7 @@ class PushStrategy (object):
                 if req and req.status_code != requests.codes.accepted:
                     self.logger.error("Push not completed. Upstream is not "
                                       "responding as expected.")
-        self.logger.info("Pushing to REST API at %s." % base_url)
+        self.logger.info("Pushing to HTTP API at %s." % base_url)
         return _push
 
 

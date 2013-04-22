@@ -71,7 +71,8 @@ if __name__ == '__main__':
     manager = core.NumbersManager()
     server = core.NumbersServer(args.port, manager)
     pusher = core.NumbersPusher(manager, args.interval,
-                                strategy=core.PushStrategy.PUSH_TO_STDOUT)
+                                strategy=core.PushStrategy.PUSH_TO_HTTP,
+                                base_URL='http://localhost:3000/')
 
     # Spawn the upstream pusher.
     gevent.spawn(pusher.start)
