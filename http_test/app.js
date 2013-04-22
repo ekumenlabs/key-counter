@@ -1,11 +1,23 @@
-var express = require('express');
+var express = require('express')
+  , io = require('socket.io')
 
-var app = express();
+  , app = express()
+  , server = require('http').createServer(app)
+  , io = io.listen(server);
 
+// The socket.io server.
+server.listen(8000);
+console.log('socket.io server listening on port 8000');
+
+app.listen(3000);
+console.log('application server listening on port 3000');
+
+///////////////////////////////////////////////////////////////////////////////
+
+app.use(express.static(__dirname));
 app.use(express.bodyParser());
 
 allowedUserData = ['etoccalino'];
-
 
 app.post('/:username', function (req, res) {
   user = req.params.username;
@@ -23,11 +35,12 @@ app.post('/:username', function (req, res) {
   }
   else {
 
-  console.log(user + ': ' + req.body.count);
-  res.send(202, 'Accepted');
+    // Responde to key_counter_server.
+    console.log(user + ': ' + req.body.count);
+    res.send(202, 'Accepted');
+
+    // Emit to connected clients to update their counts.
+    io.of('/key-count').emit('user update', {user: user, count: req.body.count});
 
   }
 });
-
-app.listen(3000);
-console.log('Listening on port 3000');

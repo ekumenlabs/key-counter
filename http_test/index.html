@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+	<meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <title>Test http push</title>
+  </head>
+
+  <body>
+    <p>For user <span id="user">(?)</span> the count is <span id="count">(?)</span></p>
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="http://localhost:8000/socket.io/socket.io.js"></script>
+    <script>
+      var socket = io.connect('http://localhost:8000/key-count');
+      socket.on('user update', function (data) {
+        console.log(data);
+        $('#user').text(data.user);
+        $('#count').text(data.count);
+      });
+    </script>
+  </body>
+</html>
