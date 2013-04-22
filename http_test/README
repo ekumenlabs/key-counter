@@ -1,0 +1,11 @@
+This test app is designed to serve as a simple implementation of the endpoints required by the key counter system.
+
+It requires `node` and `npm` to be installed on the system.
+
+To install this test app run `npm install`. To run it, use `node app`.
+
+The app will simply output the passed user data. It's the simplest implementation that could work. It can be used to tests that:
+
+    * A "count" field must be passed in the POST data.
+    * A 202 must be returned if data has good shape.
+    * Only certain users could be listened to (this is not required).

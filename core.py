@@ -132,8 +132,8 @@ class PushStrategy (object):
 
         The API must implement the following endpoints:
 
-        "base_URL/:user" : will receive an integer value which corresponds to
-        the latest key count for that user.
+        "base_URL/:user" : will receive a JSON object {'count': (number)} which
+        corresponds to the latest key count for that user.
 
         Each end point should accept a single integer as data payload, and
         return a status code of 202 Accepted.
