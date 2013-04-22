@@ -35,7 +35,7 @@ class NumbersManager:
         packet = {}
         # Send the last count aggregated for each user.
         for user in self.user_data:
-            packet[user] = self.user_data[user][-1]
+            packet[user] = {'count': self.user_data[user][-1]}
         token = self._hash_user_data()
         return packet, token
 
@@ -138,8 +138,9 @@ class PushStrategy (object):
         Each end point should accept a single integer as data payload, and
         return a status code of 202 Accepted.
         """
-        import json
         import requests
+        import requests.exceptions
+        POST_TIMEOUT = 3  # seconds
         # No trailing slash on the base URL.
         base_url = base_URL
         if base_URL[-1] == '/':
@@ -148,12 +149,20 @@ class PushStrategy (object):
         def _push(data):
             for user in data:
                 url = "%s/%s" % (base_url, user)
-                payload = json.dumps(data[user])
-                req = requests.post(url, data=payload)
-                if req.status_code != requests.codes.accepted:
-                    # Push was not completed.
-                    self.logger.error("Push not completed. "
-                                      "I blame the backend upstream.")
+                req = None
+                try:
+                    req = requests.post(url, data=data[user],
+                                        timeout=POST_TIMEOUT)
+                except requests.exceptions.ConnectionError:
+                    self.logger.error("Connection error. Either %s is not the "
+                                      "correct base URL, or upstream is not "
+                                      "behaving as expected." % base_url)
+                except requests.exceptions.Timeout:
+                    self.logger.error("Push timeout. Upstream is taking too "
+                                      "long to process the data push.")
+                if req and req.status_code != requests.codes.accepted:
+                    self.logger.error("Push not completed. Upstream is not "
+                                      "responding as expected.")
         self.logger.info("Pushing to REST API at %s." % base_url)
         return _push
 
