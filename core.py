@@ -48,7 +48,7 @@ class NumbersManager:
 ###############################################################################
 
 class NumbersPusher:
-    "Push packed key count data to the destination sever."
+    "Push packed key count data to the destination sever at regular intervals."
 
     logger = logging.getLogger('push.pusher')
 
@@ -66,14 +66,12 @@ class NumbersPusher:
     def start(self):
         "Loop to collect data and call self.push()"
         self.running = True
-        token = None
         while self.running:
             gevent.sleep(self.interval)
-            if token != self.manager.get_data_token():
-                data, token = self.manager.get_data_packet()
-                self.push(data)
+            data_packet = self.manager.get_data_packet()
+            self._push(data_packet)
 
-    def push(self, data):
+    def _push(self, data):
         # Delegate to the selected push strategy.
         self.logger.debug("Calling push() data.")
         self._pusher.push(data)
@@ -174,6 +172,8 @@ class PushStrategy (object):
 ###############################################################################
 
 class NumbersServer(DatagramServer):
+    "Persistent server capable of receiving key counts."
+    logger = logging.getLogger('network')
 
     def __init__(self, port, manager, *args, **kwargs):
         address = ":%s" % port
@@ -188,6 +188,6 @@ class NumbersServer(DatagramServer):
         except (ValueError, TypeError):
             # ValueError due to bad JSON data,
             # TypeError due to bad number.
-            print 'bad data ignored.'
+            self.logger.warn('bad data ignored.')
         else:
             self.manager.aggregate_user_data(user, value)
