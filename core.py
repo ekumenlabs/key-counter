@@ -1,5 +1,4 @@
 from gevent.server import DatagramServer
-import hashlib
 import gevent
 import json
 
@@ -9,35 +8,41 @@ import logging
 ###############################################################################
 
 class NumbersManager:
-    "Collect user counts, and sends them together."
+    "Collect user counts and provides collected computed values."
 
-    # Mapping from user name to current key count, shared by all managers.
-    # It'll be populated on demand.
-    user_data = {}
-
-    def _hash_user_data(self):
-        encoded_data = json.dumps(self.user_data, sort_keys=True)
-        return hashlib.md5(encoded_data).hexdigest()
+    def __init__(self):
+        # Buffer for previous data, used to compute new values.
+        self.stashed_data = []
+        # Mapping from user name to previous key count.
+        self.aggregated = {}
 
     def aggregate_user_data(self, user, count):
-        # Add the user to the mapping.
-        if not user in self.user_data:
-            self.user_data[user] = []
-        # Aggregate the latest count.
-        self.user_data[user].append(count)
-
-    def get_data_token(self):
-        return self._hash_user_data()
+        "Aggregate data as a (user, count) pair"
+        self.aggregated[user] = count
 
     def get_data_packet(self):
-        # TODO: This operation should produce both the packet and the token
-        # atomically.
-        packet = {}
-        # Send the last count aggregated for each user.
-        for user in self.user_data:
-            packet[user] = {'count': self.user_data[user][-1]}
-        token = self._hash_user_data()
-        return packet, token
+        """Return the data packet and a token to it.
+
+        Each time this method is called, the data aggregated so far is used to
+        compute the data packet returned, and then dropped.
+        """
+        # Aggregated users with no entry in the stash are sent with zero value.
+        packet = {user: 0 for user in self.aggregated}
+
+        new_stash = []
+        for user, stashed_count in self.stashed_data:
+            # Compute for aggregated users.
+            if user in packet:
+                current_count = self.aggregated[user]
+                # Include user and its current count in the next stash.
+                new_stash.append((user, current_count))
+                # Update user computed value.
+                packet[user] = self._compute(stashed_count, current_count)
+        # Update the stash and dropped the used up aggregated data.
+        self.stashed_data = new_stash
+        self.aggregated = {}
+
+        return packet
 
 
 ###############################################################################
@@ -75,9 +80,8 @@ class NumbersPusher:
 
 
 class PushStrategy (object):
-    """A push strategy takes a data dict, in the format of the first element of
-    the tuple returned by NumbersManager.get_data_packet(), and pushes it
-    upstream.
+    """A push strategy takes a data dict, in the format by
+    NumbersManager.get_data_packet(), and pushes it upstream.
 
     The details of what "upstream" is, and how to push that data to it, are
     isolated by each strategy.
