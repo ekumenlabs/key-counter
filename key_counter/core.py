@@ -14,10 +14,15 @@ class NumbersManager:
         # Buffer for previous data, used to compute new values.
         self.stashed_data = []
         # Mapping from user name to previous key count.
+        # NOTE: Using a dict as per aggregate_user_data() specification.
         self.aggregated = {}
 
     def aggregate_user_data(self, user, count):
-        "Aggregate data as a (user, count) pair"
+        """Aggregate data as a (user, count) pair.
+
+        Repeated entries (different counts for the same user) are possible, but
+        only the latest is retained.
+        """
         self.aggregated[user] = count
 
     def get_data_packet(self):
@@ -25,24 +30,36 @@ class NumbersManager:
 
         Each time this method is called, the data aggregated so far is used to
         compute the data packet returned, and then dropped.
-        """
-        # Aggregated users with no entry in the stash are sent with zero value.
-        packet = {user: 0 for user in self.aggregated}
 
+        In the event of repeated entries in the aggregated data, last entry is
+        used to produce a value.
+        """
+        # The new stash is build along with the packet.
         new_stash = []
-        for user, stashed_count in self.stashed_data:
-            # Compute for aggregated users.
-            if user in packet:
-                current_count = self.aggregated[user]
-                # Include user and its current count in the next stash.
-                new_stash.append((user, current_count))
-                # Update user computed value.
-                packet[user] = self._compute(stashed_count, current_count)
+
+        packet = {}
+        for user, count in self.aggregated.items():
+            # Only aggregated users will be in the new stash,
+            # and in the packet.
+            if user in self.stashed_data:
+                # With previously collected data compute value to send.
+                packet[user] = self._compute(self.stashed_data[user], count)
+                new_stash.append((user, count))
+            else:
+                packet[user] = 0
+                new_stash.append((user, 0))
+
         # Update the stash and dropped the used up aggregated data.
         self.stashed_data = new_stash
         self.aggregated = {}
 
         return packet
+
+    def _compute(self, previous, current):
+        value = current - previous
+        if value < 0:
+            return 0
+        return value
 
 
 ###############################################################################
