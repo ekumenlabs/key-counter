@@ -12,7 +12,7 @@ class NumbersManager:
 
     def __init__(self):
         # Buffer for previous data, used to compute new values.
-        self.stashed_data = []
+        self.stashed_data = {}
         # Mapping from user name to previous key count.
         # NOTE: Using a dict as per aggregate_user_data() specification.
         self.aggregated = {}
@@ -34,23 +34,14 @@ class NumbersManager:
         In the event of repeated entries in the aggregated data, last entry is
         used to produce a value.
         """
-        # The new stash is build along with the packet.
-        new_stash = []
-
-        packet = {}
+        # Only aggregated users will be in the packet.
+        packet = {user: 0 for user in self.aggregated}
         for user, count in self.aggregated.items():
-            # Only aggregated users will be in the new stash,
-            # and in the packet.
             if user in self.stashed_data:
                 # With previously collected data compute value to send.
                 packet[user] = self._compute(self.stashed_data[user], count)
-                new_stash.append((user, count))
-            else:
-                packet[user] = 0
-                new_stash.append((user, 0))
 
-        # Update the stash and dropped the used up aggregated data.
-        self.stashed_data = new_stash
+        self.stashed_data = self.aggregated
         self.aggregated = {}
 
         return packet

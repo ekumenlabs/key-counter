@@ -2,6 +2,10 @@ import unittest
 import gevent
 import core
 
+import logging
+logging.basicConfig()
+logger = logging.getLogger('tests')
+
 
 class NumbersManagerTestCase(unittest.TestCase):
 
@@ -65,10 +69,13 @@ class NumbersManagerTestCase(unittest.TestCase):
     def test_stashed_with_value_in_packet(self):
         self.manager.aggregate_user_data('moe', 11)
         self.manager.get_data_packet()
+        logger.debug("stashed data in manager is: %s"
+                     % self.manager.stashed_data)
         self.manager.aggregate_user_data('moe', 15)
         # Moe was stashed, it should have non-zero count in the packet
         packet = self.manager.get_data_packet()
         value = self.manager._compute(11, 15)
+        logger.debug("packet is %s" % packet)
         self.assertEqual(value, packet['moe'])
 
     def test_compute_counts(self):
