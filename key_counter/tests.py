@@ -66,7 +66,7 @@ class NumbersManagerTestCase(unittest.TestCase):
         self.manager.aggregate_user_data('moe', 11)
         self.manager.get_data_packet()
         self.manager.aggregate_user_data('moe', 15)
-        # Moe was stashed, it should have non zero count in the packet
+        # Moe was stashed, it should have non-zero count in the packet
         packet = self.manager.get_data_packet()
         value = self.manager._compute(11, 15)
         self.assertEqual(value, packet['moe'])
@@ -104,6 +104,13 @@ class NumbersPusherTestCase(unittest.TestCase):
         self.pusher.stop()
         gevent.sleep()
         self.assertFalse(self.pusher.running)
+
+    def test_push_packet(self):
+        self.pusher.manager.aggregate_user_data('moe', 11)
+        packet = self.pusher.manager.get_data_packet()
+        self.pusher._push(packet)
+        self.assertEqual(1, len(self.pusher._pusher.pushed))
+        self.assertEqual(packet, self.pusher._pusher.pushed[0])
 
     def test_push_empty_packet(self):
         packet = self.pusher.manager.get_data_packet()
