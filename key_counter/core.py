@@ -55,8 +55,8 @@ class NumbersManager:
 
         return packet
 
-    def _compute(self, previous, current):
-        value = current - previous
+    def _compute(self, previous_count, current_count):
+        value = current_count - previous_count
         if value < 0:
             return 0
         return value
