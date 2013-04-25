@@ -1,6 +1,6 @@
 import gevent
 import argparse
-import core
+import key_counter.core
 
 ###############################################################################
 
@@ -68,11 +68,12 @@ if __name__ == '__main__':
         args.port = PUSH_INTERVAL
 
     # Initialize core components.
-    manager = core.NumbersManager()
-    server = core.NumbersServer(args.port, manager)
-    pusher = core.NumbersPusher(manager, args.interval,
-                                strategy=core.PushStrategy.PUSH_TO_HTTP,
-                                base_URL='http://localhost:3000/')
+    manager = key_counter.core.NumbersManager()
+    server = key_counter.core.NumbersServer(args.port, manager)
+    pusher = key_counter.core.NumbersPusher(
+        manager, args.interval,
+        strategy=key_counter.core.PushStrategy.PUSH_TO_HTTP,
+        base_URL='http://localhost:3000/')
 
     # Spawn the upstream pusher.
     gevent.spawn(pusher.start)
