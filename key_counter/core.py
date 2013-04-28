@@ -11,6 +11,7 @@ class NumbersManager:
     "Collect user counts and provides collected computed values."
 
     def __init__(self):
+        self.compute = None
         # Buffer for previous data, used to compute new values.
         self.stashed_data = {}
         # Mapping from user name to previous key count.
@@ -39,18 +40,12 @@ class NumbersManager:
         for user, count in self.aggregated.items():
             if user in self.stashed_data:
                 # With previously collected data compute value to send.
-                packet[user] = self._compute(self.stashed_data[user], count)
+                packet[user] = self.compute(self.stashed_data[user], count)
 
         self.stashed_data = self.aggregated
         self.aggregated = {}
 
         return packet
-
-    def _compute(self, previous_count, current_count):
-        value = current_count - previous_count
-        if value < 0:
-            return 0
-        return value
 
 
 ###############################################################################
@@ -66,6 +61,16 @@ class NumbersPusher:
         self.running = False
         # Compose the push strategy object, and delegate to it.
         self._pusher = PushStrategy(strategy, *args, **kwargs)
+        self.manager.compute = self._build_computer()
+
+    def _build_computer(self):
+        def compute(old_count, new_count):
+            # Approximate the "kpm" keys per minute.
+            value = int(round((new_count - old_count) * 60 / self.interval))
+            if value < 0:
+                return 0
+            return value
+        return compute
 
     def stop(self):
         self.logger.info("Stoping the pusher event loop.")
