@@ -60,12 +60,13 @@ class NumbersPusher:
 
     logger = logging.getLogger('push.pusher')
 
-    def __init__(self, manager, interval, strategy='test', *args, **kwargs):
+    def __init__(self, manager, interval=1):
+        """Takes a data manager and a push interval (defaults to 1 second)."""
         self.manager = manager
         self.interval = interval
         self.running = False
-        # Compose the push strategy object, and delegate to it.
-        self._pusher = PushStrategy(strategy, *args, **kwargs)
+        # Will delegate pushing data to the push-strategy objects.
+        self._pushers = {}
 
     def stop(self):
         self.logger.info("Stoping the pusher event loop.")
@@ -80,9 +81,19 @@ class NumbersPusher:
             self._push(data_packet)
 
     def _push(self, data):
-        # Delegate to the selected push strategy.
+        # Delegate to the configured push strategies.
         self.logger.debug("Calling push() data.")
-        self._pusher.push(data)
+        for pusher in self._pushers.values():
+            pusher.push(data)
+
+    def add_upstream(self, name, strategy, *args, **kwargs):
+        self.logger.debug('Adding pusher "%s", of type "%s"'
+                          % (name, strategy))
+        self._pushers[name] = PushStrategy(strategy, *args, **kwargs)
+
+    def remove_upstream(self, name):
+        self.logger.debug('Removing pusher "%s"' % name)
+        del self._pushers[name]
 
 
 class PushStrategy (object):
@@ -97,6 +108,7 @@ class PushStrategy (object):
     PUSH_TO_STDOUT = 'stdout'
     PUSH_TO_FILE = 'file'
     PUSH_TO_HTTP = 'http'
+    PUSH_TYPES = [PUSH_TEST, PUSH_TO_STDOUT, PUSH_TO_FILE, PUSH_TO_HTTP]
 
     def __init__(self, strategy, *args, **kwargs):
         self.logger = logging.getLogger('push.strategy.%s' % strategy)
@@ -111,14 +123,18 @@ class PushStrategy (object):
         else:
             raise ValueError('Strategy "%s" not known.' % strategy)
 
-    def _test_push(self):
+    def _test_push(self, **kwargs):
         def _push(data):
             self.logger.debug("Pushing data.")
             self.pushed.append(data)
             self.logger.debug("Current pushed data: %s" % self.pushed)
         self.logger.info("Test pushing: "
                          "data is accumulated in self.pushed list.")
+        # Allow to test pushing to RAM.
         self.pushed = []
+        # Keep arbitraty options.
+        for kw in kwargs:
+            setattr(self, kw, kwargs[kw])
         return _push
 
     def _push_to_stdout(self):

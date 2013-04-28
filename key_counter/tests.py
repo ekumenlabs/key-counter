@@ -1,6 +1,7 @@
 import unittest
 import gevent
 import core
+import config
 
 import logging
 logging.basicConfig()
@@ -96,6 +97,7 @@ class NumbersPusherTestCase(unittest.TestCase):
     def setUp(self):
         mon = core.NumbersManager()
         self.pusher = core.NumbersPusher(mon, 1)
+        self.pusher.add_upstream('tests', strategy="test")
 
     def test_not_running(self):
         self.assertFalse(self.pusher.running)
@@ -116,11 +118,165 @@ class NumbersPusherTestCase(unittest.TestCase):
         self.pusher.manager.aggregate_user_data('moe', 11)
         packet = self.pusher.manager.get_data_packet()
         self.pusher._push(packet)
-        self.assertEqual(1, len(self.pusher._pusher.pushed))
-        self.assertEqual(packet, self.pusher._pusher.pushed[0])
+        self.assertEqual(1, len(self.pusher._pushers['tests'].pushed))
+        self.assertEqual(packet, self.pusher._pushers['tests'].pushed[0])
 
     def test_push_empty_packet(self):
         packet = self.pusher.manager.get_data_packet()
         self.pusher._push(packet)
-        self.assertEqual(1, len(self.pusher._pusher.pushed))
-        self.assertEqual(packet, self.pusher._pusher.pushed[0])
+        self.assertEqual(1, len(self.pusher._pushers['tests'].pushed))
+        self.assertEqual(packet, self.pusher._pushers['tests'].pushed[0])
+
+    def test_remove_last_upstream(self):
+        self.pusher.remove_upstream("tests")
+        self.assertEqual({}, self.pusher._pushers)
+
+    def test_add_another_upstream(self):
+        self.pusher.add_upstream("tests second", "test")
+        they_are_there = ("tests" in self.pusher._pushers
+                          and "tests second" in self.pusher._pushers)
+        self.assertTrue(they_are_there)
+
+    def test_add_and_remove(self):
+        orig = self.pusher._pushers.copy()
+        self.pusher.add_upstream("another test", "test")
+        self.pusher.remove_upstream("another test")
+        self.assertItemsEqual(orig, self.pusher._pushers)
+
+    def test_swap_upstreams(self):
+        self.pusher.add_upstream("new tests", "test")
+        self.pusher.remove_upstream("tests")
+        swaped = ("tests" not in self.pusher._pushers
+                  and "new tests" in self.pusher._pushers)
+        self.assertTrue(swaped)
+
+
+###############################################################################
+
+class ConfigManagerTestCase (unittest.TestCase):
+
+    def setUp(self):
+        manager = core.NumbersManager()
+        pusher = core.NumbersPusher(manager, 1)
+        self.c = config.ConfigManager(pusher)
+
+    def test_empty_config(self):
+        config = []
+        self.c.reconfigure(config)
+
+    def test_simple_reconfigure(self):
+        config = [{
+            "name": "testing",
+            "type": "test"
+        }]
+        self.c.reconfigure(config)
+
+    def test_simple_with_options(self):
+        config = [{
+            "name": "testing",
+            "type": "test",
+            "options": {}
+        }]
+        self.c.reconfigure(config)
+
+    def test_bad_config(self):
+        config = [{
+            "name": "testing",
+        }]
+        self.assertRaises(ValueError, self.c.reconfigure, config)
+        config = [{
+            "type": "testing",
+        }]
+        self.assertRaises(ValueError, self.c.reconfigure, config)
+
+    def test_configured_upstream(self):
+        config = [{
+            "name": "testing",
+            "type": "test"
+        }]
+        self.c.reconfigure(config)
+        self.assertTrue("testing" in self.c.pusher._pushers)
+
+    def test_configured_multiple_upstream(self):
+        config = [{
+            "name": "testing",
+            "type": "test"
+        }, {
+            "name": "second testing",
+            "type": "test"
+        }]
+        self.c.reconfigure(config)
+        self.assertTrue("testing" in self.c.pusher._pushers)
+        self.assertTrue("second testing" in self.c.pusher._pushers)
+
+    def test_remove_upstream(self):
+        config = [{
+            "name": "testing",
+            "type": "test"
+        }, {
+            "name": "second testing",
+            "type": "test"
+        }]
+        self.c.reconfigure(config)
+        self.assertTrue("testing" in self.c.pusher._pushers)
+        self.assertTrue("second testing" in self.c.pusher._pushers)
+        first = self.c._config["second testing"]
+        config = [{
+            "name": "second testing",
+            "type": "test"
+        }]
+        self.c.reconfigure(config)
+        self.assertTrue("testing" not in self.c.pusher._pushers)
+        self.assertTrue("second testing" in self.c.pusher._pushers)
+        second = self.c._config["second testing"]
+        self.assertEqual(id(first), id(second))
+
+    def test_add_upstream(self):
+        config = [{
+            "name": "second testing",
+            "type": "test"
+        }]
+        self.c.reconfigure(config)
+        first = self.c._config["second testing"]
+        config = [{
+            "name": "testing",
+            "type": "test"
+        }, {
+            "name": "second testing",
+            "type": "test"
+        }]
+        self.c.reconfigure(config)
+        self.assertTrue("testing" in self.c.pusher._pushers)
+        self.assertTrue("second testing" in self.c.pusher._pushers)
+        second = self.c._config["second testing"]
+        self.assertEqual(id(first), id(second))
+
+    def test_modify_upstream(self):
+        config = [{
+            "name": "testing",
+            "type": "test",
+        }, {
+            "name": "second testing",
+            "type": "test"
+        }]
+        self.c.reconfigure(config)
+        first = id(self.c._config["second testing"])
+
+        # Same configuration, but add an option to "testing" upstream
+        config = [{
+            "name": "testing",
+            "type": "test",
+            "options": {"dummy_option": "1"}
+        }, {
+            "name": "second testing",
+            "type": "test"
+        }]
+        self.c.reconfigure(config)
+
+        # Ensure the other upstream is not affected.
+        second = id(self.c._config["second testing"])
+
+        self.assertEqual(first, second)
+        testing_pusher = self.c.pusher._pushers["testing"]
+        self.assertTrue(hasattr(testing_pusher, 'dummy_option'))
+        self.assertEqual("1", testing_pusher.dummy_option)
