@@ -80,13 +80,15 @@ if __name__ == '__main__':
     server = key_counter.core.NumbersServer(args.port, manager)
     pusher = key_counter.core.NumbersPusher(manager, args.interval)
 
-    # Spawn the upstream pusher, dry.
-    gevent.spawn(pusher.start)
-
     # Initialize the configuration components.
     config_manager = key_counter.config.ConfigManager(pusher)
     file_config_manager = key_counter.config.ConfigFileManager(
         config_manager, args.config_file, interval=5)
+
+    # Start the upstream pusher, dry.
+    pusher.start()
+    # Start the config file manager, to watch the config file.
+    file_config_manager.start_watching()
 
     # pusher = key_counter.core.NumbersPusher(
     #     manager, args.interval,

@@ -101,7 +101,7 @@ class NumbersPusherTestCase(unittest.TestCase):
 
     def setUp(self):
         mon = core.NumbersManager()
-        self.pusher = core.NumbersPusher(mon, 1)
+        self.pusher = core.NumbersPusher(mon, interval=0.1)
         self.pusher.add_upstream('tests', strategy="test")
 
     def test_not_running(self):
@@ -112,19 +112,28 @@ class NumbersPusherTestCase(unittest.TestCase):
         self.assertFalse(self.pusher.running)
 
     def test_start_stop(self):
-        gevent.spawn(self.pusher.start)
+        self.pusher.start()
         gevent.sleep()
         self.assertTrue(self.pusher.running)
         self.pusher.stop()
         gevent.sleep()
         self.assertFalse(self.pusher.running)
 
-    def test_push_packet(self):
+    def test_push_method(self):
         self.pusher.manager.aggregate_user_data('moe', 11)
         packet = self.pusher.manager.get_data_packet()
         self.pusher._push(packet)
         self.assertEqual(1, len(self.pusher._pushers['tests'].pushed))
         self.assertEqual(packet, self.pusher._pushers['tests'].pushed[0])
+
+    def test_push_loop(self):
+        self.pusher.start()
+        self.pusher.manager.aggregate_user_data('moe', 11)
+        packet = {'moe': 0}
+        gevent.sleep(0.15)
+        self.assertEqual(1, len(self.pusher._pushers['tests'].pushed))
+        self.assertEqual(packet, self.pusher._pushers['tests'].pushed[0])
+        self.pusher.stop()
 
     def test_push_empty_packet(self):
         packet = self.pusher.manager.get_data_packet()
