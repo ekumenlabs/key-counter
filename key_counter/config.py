@@ -8,26 +8,22 @@ logger = logging.getLogger('config')
 
 
 class ConfigFileManager (object):
-    "Maybe this is just a couple of functions."
+    """Allow to read a configuration file, and also watch it for changes."""
 
     def __init__(self, config_manager, filename, interval=3):
         # TODO: check file existance and read-permission.
         self.filename = filename
+        self.interval = interval
 
         self.config_manager = config_manager
         self.notifier = inotify.init()
         inotify.add_watch(self.notifier, filename, inotify.IN_CLOSE_WRITE)
 
-        # Read config file on startup.
-        self.read_config_file()
+    def read(self):
+        """Read the configuration file and trigger reconfiguration.
 
-        # Watch the config file for changes.
-        self._loop = gevent.spawn(self.notification_loop, interval)
-
-    def stop(self):
-        self._loop.kill()
-
-    def read_config_file(self):
+        Errors in the config file are registered in log, but ignored.
+        """
         with open(self.filename, 'r') as config_file:
             try:
                 config = json.load(config_file)
@@ -36,11 +32,24 @@ class ConfigFileManager (object):
                 # TODO: better error handling
                 logger.warn("bad configuration file %s." % self.filename)
 
+    def start_watching(self):
+        "Start watching the the config file for changes."
+        # Read config file on startup.
+        self.read()
+
+        # Watch the config file for changes.
+        self._loop = gevent.spawn(self.notification_loop, self.interval)
+
+    def stop_watching(self):
+        "Stop watching the file."
+        self._loop.kill()
+
     def notification_loop(self, interval):
         while True:
             gevent.sleep(interval)
             inotify.get_events(self.notifier)
             self.read_config_file()
+
 
 class ConfigManager (object):
     """A config object is a list of dict , each of which has all strings for

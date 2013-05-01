@@ -292,38 +292,37 @@ class ConfigFileManagerTestCase (unittest.TestCase):
     FILE = 'test-config.json'
 
     def setUp(self):
-        manager = core.NumbersManager()
-        self.pusher = core.NumbersPusher(manager, 1)
-        self.c = config.ConfigManager(self.pusher)
-        gevent.spawn(self.pusher.start)
-
         with open(self.FILE, 'w') as f:
             json.dump([], f)
 
+        manager = core.NumbersManager()
+        self.pusher = core.NumbersPusher(manager, 1)
+        self.c = config.ConfigManager(self.pusher)
+        self.conf = config.ConfigFileManager(
+            self.c, self.FILE, interval=0)
+
+        gevent.spawn(self.pusher.start)
+
     def tearDown(self):
-        # Stop the running pusher and config manager.
+        # Stop the running pusher.
         self.pusher.stop()
         # Remove the test file.
         import os
         os.remove(self.FILE)
 
     def test_simplest_config(self):
-        cmanager = config.ConfigFileManager(
-            self.c, self.FILE, interval=0)
-
         self.assertEqual(0, len(self.c._config))
         # The simplest possible configuration.
         with open(self.FILE, 'w') as f:
             f.write('[]')
+
+        self.conf.read()
+
         # Give opportunity to discover the config.
         gevent.sleep()
-        self.assertEqual(0, len(cmanager.config_manager._config))
-        cmanager.stop()
+        self.assertEqual(0, len(self.conf.config_manager._config))
 
     def test_config(self):
-        cmanager = config.ConfigFileManager(
-            self.c, self.FILE, interval=0)
-
         self.assertEqual(0, len(self.c._config))
         conf = {
             "name": "testing",
@@ -331,7 +330,9 @@ class ConfigFileManagerTestCase (unittest.TestCase):
         }
         with open(self.FILE, 'w') as f:
             json.dump([conf], f)
+
+        self.conf.read()
+
         # Give opportunity to discover the config.
         gevent.sleep(1)
-        self.assertTrue("testing" in cmanager.config_manager._config)
-        cmanager.stop()
+        self.assertTrue("testing" in self.conf.config_manager._config)
