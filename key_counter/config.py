@@ -42,13 +42,14 @@ class ConfigFileManager (object):
 
     def stop_watching(self):
         "Stop watching the file."
+        # Raise an exception in the notification loop to halt it at once.
         self._loop.kill()
 
     def notification_loop(self, interval):
         while True:
             gevent.sleep(interval)
             inotify.get_events(self.notifier)
-            self.read_config_file()
+            self.read()
 
 
 class ConfigManager (object):
