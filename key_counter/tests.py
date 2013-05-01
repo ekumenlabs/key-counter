@@ -296,8 +296,8 @@ class ConfigFileManagerTestCase (unittest.TestCase):
             json.dump([], f)
 
     def tearDown(self):
-        # erase the FILE.
-        pass
+        import os
+        os.remove(self.FILE)
 
     def test_simplest_config(self):
         cmanager = config.ConfigFileManager(
