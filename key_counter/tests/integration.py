@@ -3,6 +3,7 @@ monkey.patch_all()
 
 import unittest
 import gevent
+import json
 from key_counter import core
 from key_counter import config
 
@@ -81,3 +82,69 @@ class Integration (unittest.TestCase):
         gevent.sleep(0.3)
         self.assertEqual(1, len(one_push_stack))
         self.assertEqual(1, len(two_push_stack))
+
+    # Test watching the configuration, pushing to RAM.
+    def test_watch(self):
+        FILE = 'test-config.json'
+        FIRST_CONFIG = [{
+            "name": "one",
+            "type": "test",
+            "options": {"dummy_option": "1"}
+        }]
+        SECOND_CONFIG = [{
+            "name": "one",
+            "type": "test",
+            "options": {"dummy_option": "1"}
+        }, {
+            "name": "two",
+            "type": "test"
+        }]
+        THIRD_CONFIG = [{
+            "name": "two",
+            "type": "test"
+        }]
+
+        logger.info("creating single upstream config file.")
+        with open(FILE, 'w') as f:
+            json.dump(FIRST_CONFIG, f)
+
+        logger.info("booting objects.")
+        data_manager = core.NumbersManager()
+        pusher = core.NumbersPusher(data_manager, interval=0.1)
+        self.m = config.ConfigManager(pusher)
+        self.c = config.ConfigFileManager(self.m, FILE, interval=0.1)
+
+        logger.info("starting the pusher and config watcher")
+        pusher.start()
+        self.c.start_watching()
+
+        # The one upstream has been created.
+        gevent.sleep(0.15)
+        self.assertEqual(1, len(self.m._config))
+        self.assertTrue("one" in pusher._pushers)
+        # self.assertTrue("two" in pusher._pushers)
+        self.assertEqual(pusher._pushers["one"].dummy_option, "1")
+
+        logger.info("creating dual entry config file.")
+        with open(FILE, 'w') as f:
+            json.dump(SECOND_CONFIG, f)
+
+        # Now two upstream has been created.
+        gevent.sleep(0.15)
+        self.assertEqual(2, len(self.m._config))
+        self.assertTrue("one" in pusher._pushers)
+        self.assertTrue("two" in pusher._pushers)
+        self.assertEqual(pusher._pushers["one"].dummy_option, "1")
+
+        logger.info("creating different single entry config file.")
+        with open(FILE, 'w') as f:
+            json.dump(THIRD_CONFIG, f)
+
+        # Now two upstream has been created.
+        gevent.sleep(0.15)
+        self.assertEqual(1, len(self.m._config))
+        self.assertTrue("two" in pusher._pushers)
+
+        logger.info("removing the test config file.")
+        import os
+        os.remove(FILE)
