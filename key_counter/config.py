@@ -35,7 +35,6 @@ class ConfigFileManager (object):
             except Exception:
                 # TODO: better error handling
                 logger.warn("bad configuration file %s." % self.filename)
-                raise
 
     def notification_loop(self, interval):
         while True:
