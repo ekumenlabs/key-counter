@@ -300,7 +300,7 @@ class ConfigFileManagerTestCase (unittest.TestCase):
         pass
 
     def test_simplest_config(self):
-        config_file_manager = config.ConfigFileManager(
+        cmanager = config.ConfigFileManager(
             self.c, self.FILE, interval=0)
 
         self.assertEqual(0, len(self.c._config))
@@ -309,10 +309,10 @@ class ConfigFileManagerTestCase (unittest.TestCase):
             f.write('[]')
         # Give opportunity to discover the config.
         gevent.sleep()
-        self.assertEqual(0, len(self.c._config))
+        self.assertEqual(0, len(cmanager.config_manager._config))
 
     def test_config(self):
-        config_file_manager = config.ConfigFileManager(
+        cmanager = config.ConfigFileManager(
             self.c, self.FILE, interval=0)
 
         self.assertEqual(0, len(self.c._config))
@@ -324,4 +324,4 @@ class ConfigFileManagerTestCase (unittest.TestCase):
             json.dump([conf], f)
         # Give opportunity to discover the config.
         gevent.sleep(1)
-        self.assertTrue("testing" in self.c._config)
+        self.assertTrue("testing" in cmanager.config_manager._config)
