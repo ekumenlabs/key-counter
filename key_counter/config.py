@@ -17,24 +17,31 @@ class ConfigFileManager (object):
         self.config_manager = config_manager
         self.notifier = inotify.init()
         inotify.add_watch(self.notifier, filename, inotify.IN_CLOSE_WRITE)
+
+        # Read config file on startup.
+        self.read_config_file()
+
+        # Watch the config file for changes.
         self._loop = gevent.spawn(self.notification_loop, interval)
 
     def stop(self):
         self._loop.kill()
 
+    def read_config_file(self):
+        with open(self.filename, 'r') as config_file:
+            try:
+                config = json.load(config_file)
+                self.config_manager.reconfigure(config)
+            except Exception:
+                # TODO: better error handling
+                logger.warn("bad configuration file %s." % self.filename)
+                raise
+
     def notification_loop(self, interval):
         while True:
             gevent.sleep(interval)
             inotify.get_events(self.notifier)
-            with open(self.filename, 'r') as config_file:
-                try:
-                    config = json.load(config_file)
-                    self.config_manager.reconfigure(config)
-                except Exception:
-                    # TODO: better error handling
-                    logger.warn("bad configuration file %s." % self.filename)
-                    raise
-
+            self.read_config_file()
 
 class ConfigManager (object):
     """A config object is a list of dict , each of which has all strings for
