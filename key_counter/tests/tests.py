@@ -1,8 +1,8 @@
 import unittest
 import json
 import gevent
-import core
-import config
+from key_counter import core
+from key_counter import config
 
 import logging
 logging.basicConfig()
