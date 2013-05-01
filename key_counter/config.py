@@ -1,5 +1,6 @@
-# import gevent
-# import gevent_inotifyx as inotify
+import gevent
+import json
+import gevent_inotifyx as inotify
 from core import PushStrategy
 
 import logging
@@ -9,11 +10,28 @@ logger = logging.getLogger('config')
 class ConfigFileManager (object):
     "Maybe this is just a couple of functions."
 
-    def __init__(self, filename):
-        self.config_manager = ConfigManager()
-        # * check file existance and read-permission.
-        # * register watcher function
-        # * trigger... relaunch... ?
+    def __init__(self, config_manager, filename, interval=3):
+        # TODO: check file existance and read-permission.
+        self.filename = filename
+
+        self.config_manager = config_manager
+        self.notifier = inotify.init()
+        inotify.add_watch(self.notifier, filename, inotify.IN_CLOSE_WRITE)
+        gevent.spawn(self.notification_loop, interval)
+
+    def notification_loop(self, interval):
+        while True:
+            gevent.sleep(interval)
+            inotify.get_events(self.notifier)
+            with open(self.filename, 'r') as config_file:
+                try:
+                    config = json.load(config_file)
+                    self.config_manager.reconfigure(config)
+                except Exception:
+                    # TODO: better error handling
+                    logger.warn("bad configuration file %s." % self.filename)
+                    raise
+
 
 
 class ConfigManager (object):

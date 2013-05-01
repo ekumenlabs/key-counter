@@ -1,4 +1,5 @@
 import unittest
+import json
 import gevent
 import core
 import config
@@ -280,3 +281,47 @@ class ConfigManagerTestCase (unittest.TestCase):
         testing_pusher = self.c.pusher._pushers["testing"]
         self.assertTrue(hasattr(testing_pusher, 'dummy_option'))
         self.assertEqual("1", testing_pusher.dummy_option)
+
+
+class ConfigFileManagerTestCase (unittest.TestCase):
+
+    FILE = 'test-config.json'
+
+    def setUp(self):
+        manager = core.NumbersManager()
+        pusher = core.NumbersPusher(manager, 1)
+        self.c = config.ConfigManager(pusher)
+
+        with open(self.FILE, 'w') as f:
+            json.dump([], f)
+
+    def tearDown(self):
+        # erase the FILE.
+        pass
+
+    def test_simplest_config(self):
+        config_file_manager = config.ConfigFileManager(
+            self.c, self.FILE, interval=0)
+
+        self.assertEqual(0, len(self.c._config))
+        # The simplest possible configuration.
+        with open(self.FILE, 'w') as f:
+            f.write('[]')
+        # Give opportunity to discover the config.
+        gevent.sleep()
+        self.assertEqual(0, len(self.c._config))
+
+    def test_config(self):
+        config_file_manager = config.ConfigFileManager(
+            self.c, self.FILE, interval=0)
+
+        self.assertEqual(0, len(self.c._config))
+        conf = {
+            "name": "testing",
+            "type": "test"
+        }
+        with open(self.FILE, 'w') as f:
+            json.dump([conf], f)
+        # Give opportunity to discover the config.
+        gevent.sleep(1)
+        self.assertTrue("testing" in self.c._config)
