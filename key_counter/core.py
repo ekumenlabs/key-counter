@@ -79,7 +79,7 @@ class NumbersPusher:
         self.running = False
 
     def start(self):
-        "Loop to collect data and call self.push()"
+        "Loop to collect data and call _push()"
         self.running = True
         while self.running:
             gevent.sleep(self.interval)

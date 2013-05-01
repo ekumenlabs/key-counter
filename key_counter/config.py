@@ -17,7 +17,10 @@ class ConfigFileManager (object):
         self.config_manager = config_manager
         self.notifier = inotify.init()
         inotify.add_watch(self.notifier, filename, inotify.IN_CLOSE_WRITE)
-        gevent.spawn(self.notification_loop, interval)
+        self._loop = gevent.spawn(self.notification_loop, interval)
+
+    def stop(self):
+        self._loop.kill()
 
     def notification_loop(self, interval):
         while True:
@@ -31,7 +34,6 @@ class ConfigFileManager (object):
                     # TODO: better error handling
                     logger.warn("bad configuration file %s." % self.filename)
                     raise
-
 
 
 class ConfigManager (object):

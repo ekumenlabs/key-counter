@@ -293,13 +293,17 @@ class ConfigFileManagerTestCase (unittest.TestCase):
 
     def setUp(self):
         manager = core.NumbersManager()
-        pusher = core.NumbersPusher(manager, 1)
-        self.c = config.ConfigManager(pusher)
+        self.pusher = core.NumbersPusher(manager, 1)
+        self.c = config.ConfigManager(self.pusher)
+        gevent.spawn(self.pusher.start)
 
         with open(self.FILE, 'w') as f:
             json.dump([], f)
 
     def tearDown(self):
+        # Stop the running pusher and config manager.
+        self.pusher.stop()
+        # Remove the test file.
         import os
         os.remove(self.FILE)
 
@@ -314,6 +318,7 @@ class ConfigFileManagerTestCase (unittest.TestCase):
         # Give opportunity to discover the config.
         gevent.sleep()
         self.assertEqual(0, len(cmanager.config_manager._config))
+        cmanager.stop()
 
     def test_config(self):
         cmanager = config.ConfigFileManager(
@@ -329,3 +334,4 @@ class ConfigFileManagerTestCase (unittest.TestCase):
         # Give opportunity to discover the config.
         gevent.sleep(1)
         self.assertTrue("testing" in cmanager.config_manager._config)
+        cmanager.stop()
