@@ -80,6 +80,9 @@ class NumbersPusher:
 
     def start(self):
         "Loop to collect data and call _push()"
+        gevent.spawn(self.collect_and_push)
+
+    def collect_and_push(self):
         self.running = True
         while self.running:
             gevent.sleep(self.interval)
