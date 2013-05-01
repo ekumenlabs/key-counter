@@ -14,6 +14,10 @@ class NumbersManagerTestCase(unittest.TestCase):
     def setUp(self):
         self.manager = core.NumbersManager()
 
+        # Use a pusher to build the kpm compute function
+        pusher = core.NumbersPusher(self.manager, 5)
+        self.manager.compute = pusher._build_computer()
+
     def test_init_state(self):
         self.assertEqual(0, len(self.manager.stashed_data))
         self.assertEqual(0, len(self.manager.aggregated))
@@ -76,19 +80,19 @@ class NumbersManagerTestCase(unittest.TestCase):
         self.manager.aggregate_user_data('moe', 15)
         # Moe was stashed, it should have non-zero count in the packet
         packet = self.manager.get_data_packet()
-        value = self.manager._compute(11, 15)
+        value = self.manager.compute(11, 15)
         logger.debug("packet is %s" % packet)
         self.assertEqual(value, packet['moe'])
 
     def test_compute_counts(self):
-        self.assertEqual(5, self.manager._compute(10, 15))
-        self.assertEqual(1, self.manager._compute(1, 2))
+        self.assertEqual(60, self.manager.compute(10, 15))
+        self.assertEqual(12, self.manager.compute(1, 2))
 
     def test_compute_with_zeros(self):
-        self.assertEqual(0, self.manager._compute(0, 0))
+        self.assertEqual(0, self.manager.compute(0, 0))
 
     def test_compute_inverse_counts(self):
-        self.assertEqual(0, self.manager._compute(15, 10))
+        self.assertEqual(0, self.manager.compute(15, 10))
 
 
 ###############################################################################
