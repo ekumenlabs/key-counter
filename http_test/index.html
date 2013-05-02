@@ -58,19 +58,32 @@
               cache[user] = [0];
             } else {
               // This user is in the cache, and needs update.
-              cache[user].push(kpm);
+              var l = cache[user].length;
+              if (l > 2) {
+                var v = (cache[user][l-1] + cache[user][l-2] + cache[user][l-3] + kpm) / 4;
+                cache[user].push(parseInt(v, 10));
+              } else {
+                cache[user].push(kpm);
+              }
+              // Mark user as visited
               usersToVisit.pop(userVisited);
             }
           }
           // Update those users not present in data pushed from server.
           for (var i = 0; i < usersToVisit.length; i++) {
             user = usersToVisit[i]
-            cache[user].push(0);
+            var l = cache[user].length;
+            if (l > 2) {
+              var v = (cache[user][l-1] + cache[user][l-2] + cache[user][l-3]) / 4;
+              cache[user].push(parseInt(v, 10));
+            } else {
+              cache[user].push(0);
+            }
           }
           // Keep individual caches within limits.
           for (user in cache) {
             if (cache.hasOwnProperty(user) && (cache[user].length > cacheLimitPerUser)) {
-              cache[user] = cache[user].slice(1);
+              cache[user].shift();
             }
           }
 
