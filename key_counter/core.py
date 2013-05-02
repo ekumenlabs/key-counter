@@ -180,25 +180,27 @@ class PushStrategy (object):
         base_url = base_URL
         if base_URL[-1] == '/':
             base_url = base_URL[0:-1]
+        url = "%s/counts/" % base_url
+        headers = {'content-type': 'application/json'}
 
         def _push(data):
-            for user in data:
-                url = "%s/%s" % (base_url, user)
-                req = None
-                try:
-                    req = requests.post(url, data=data[user],
-                                        timeout=POST_TIMEOUT)
-                except requests.exceptions.ConnectionError:
-                    self.logger.error("Connection error. Either %s is not the "
-                                      "correct base URL, or upstream is not "
-                                      "behaving as expected." % base_url)
-                except requests.exceptions.Timeout:
-                    self.logger.error("Push timeout. Upstream is taking too "
-                                      "long to process the data push.")
-                if req and req.status_code != requests.codes.accepted:
-                    self.logger.error("Push not completed. Upstream is not "
-                                      "responding as expected.")
-        self.logger.info("Pushing to HTTP API at %s." % base_url)
+            packet = [{'username': user, 'count': value}
+                      for user, value in data.items()]
+            req = None
+            try:
+                req = requests.post(url, data=json.dumps(packet),
+                                    headers=headers, timeout=POST_TIMEOUT)
+            except requests.exceptions.ConnectionError:
+                self.logger.error("Connection error. Either %s is not the "
+                                  "correct base URL, or upstream is not "
+                                  "behaving as expected." % base_url)
+            except requests.exceptions.Timeout:
+                self.logger.error("Push timeout. Upstream is taking too "
+                                  "long to process the data push.")
+            if req and req.status_code != requests.codes.accepted:
+                self.logger.error("Push not completed. Upstream is not "
+                                  "responding as expected.")
+        self.logger.info("Pushing to HTTP endpoint at %s" % url)
         return _push
 
 
