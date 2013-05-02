@@ -17,30 +17,27 @@ console.log('application server listening on port 3000');
 app.use(express.static(__dirname));
 app.use(express.bodyParser());
 
-allowedUserData = ['etoccalino'];
+var allowedUserData = ['etoccalino'];
 
-app.post('/:username', function (req, res) {
-  user = req.params.username;
+app.post('/counts', function (req, res) {
+  // console.log('body: ' + JSON.stringify(req.body));
+  var collected = [];
 
-  if (allowedUserData.indexOf(user) == -1) {
+  collected = req.body;
+  // for (int i = 0; i < req.body; i++) {
+  //   var user = req.body[i].user
+  //     , count = req.body[i].count;
 
-    console.log('Data for user ' + user + ' is not allowed.');
-    res.send(400, 'Bad Request');
+  //   if (allowedUserData.indexOf(user) == -1) {
+  //     console.log('Data for user ' + user + ' is not allowed.');
+  //     res.send(400, 'Bad Request');
+  //   }
+  //   collected.push({username: user, count: count});
+  // }
 
-  } else if (req.body.count === undefined) {
+  // Responde to key_counter_server.
+  res.send(202, 'Accepted');
 
-    console.log('Data for user ' + user + ' does not have a "count" value');
-    res.send(400, 'Bad Request');
-
-  }
-  else {
-
-    // Responde to key_counter_server.
-    console.log(user + ': ' + req.body.count);
-    res.send(202, 'Accepted');
-
-    // Emit to connected clients to update their counts.
-    io.of('/key-count').emit('user update', {user: user, count: req.body.count});
-
-  }
+  // Emit to connected clients to update their counts.
+  io.of('/key-count').emit('users update', collected);
 });

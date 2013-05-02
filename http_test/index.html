@@ -6,16 +6,75 @@
   </head>
 
   <body>
-    <p>For user <span id="user">(?)</span> the count is <span id="count">(?)</span></p>
+    <div id="content"></div>
 
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
     <script src="http://localhost:8000/socket.io/socket.io.js"></script>
     <script>
-      var socket = io.connect('http://localhost:8000/key-count');
-      socket.on('user update', function (data) {
-        console.log(data);
-        $('#user').text(data.user);
-        $('#count').text(data.count);
+      var showData = function (data) {
+
+        console.log('showData(): ' + JSON.stringify(data));
+
+        for (user in data) {
+          var $container = $('#'+user);
+
+          if ($container.length == 0) {
+            $container = $('<p id="' + user + '">values for <span class="username">(?)</span>: <span class="values">(?)</span></p>');
+          }
+
+          $('.username', $container).text(user);
+          $('.values', $container).text(data[user]);
+
+          $('#content').append($container);
+        }
+      }
+
+      var socket = io.connect('http://localhost:8000/key-count')
+        , cache = {}
+        , cacheLimitPerUser = 10;
+
+      socket.on('users update', function (data) {
+        var user, kpm, usersToVisit = [];
+        // console.log(data);
+
+        // Keep count of the visited users.
+        for (user in cache) {
+          if (cache.hasOwnProperty(user)) {
+            usersToVisit.push(user);
+          }
+        }
+
+        if (data.length !== undefined) {
+
+          // Update all users in the data pushed from server.
+          for (var i = 0; i < data.length; i++) {
+            user = data[i].username;
+            kpm = data[i].count;
+
+            var userVisited = usersToVisit.indexOf(user);
+            if (userVisited == -1) {
+              // This user is not in the cache.
+              cache[user] = [0];
+            } else {
+              // This user is in the cache, and needs update.
+              cache[user].push(kpm);
+              usersToVisit.pop(userVisited);
+            }
+          }
+          // Update those users not present in data pushed from server.
+          for (var i = 0; i < usersToVisit.length; i++) {
+            user = usersToVisit[i]
+            cache[user].push(0);
+          }
+          // Keep individual caches within limits.
+          for (user in cache) {
+            if (cache.hasOwnProperty(user) && (cache[user].length > cacheLimitPerUser)) {
+              cache[user] = cache[user].slice(1);
+            }
+          }
+
+        showData(cache);
+        }
       });
     </script>
   </body>
