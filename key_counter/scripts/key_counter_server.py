@@ -100,7 +100,7 @@ if __name__ == '__main__':
         server.serve_forever()
     except KeyboardInterrupt:
         logger.info('Closing connections.')
-        file_config_manager.stop()
+        file_config_manager.stop_watching()
         pusher.stop()
         server.stop()
         # Cushion wait.
